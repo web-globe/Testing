@@ -1,0 +1,69 @@
+select * from tblUsers
+select * from tblProducts
+select * from tblTest
+
+select id, En
+select id,subject,name, subject + cast(dense_rank() over(partition by id order by id) as nvarchar(10)) as RowNum from tblTest
+
+
+
+
+
+DECLARE @cols AS NVARCHAR(MAX),
+    @query  AS NVARCHAR(MAX)
+		
+select @cols = STUFF((SELECT ',' + QUOTENAME(subject) 
+                    from tblTest
+                    group by subject,id
+                    order by id
+            FOR XML PATH(''), TYPE
+            ).value('.', 'NVARCHAR(MAX)') 
+        ,1,1,'')
+
+set @query = N'SELECT distinct ' + @cols + N' from 
+             (
+                select name, subject
+                from tblTest
+            ) x
+            pivot 
+            (
+                max(name)
+                for subject in (' + @cols + N')
+            ) p '
+
+exec sp_executesql @query;
+
+
+
+select * from tblTest order by 3 desc
+
+select 
+  max(case when subject = 'English' then name end) English,
+  max(case when subject = 'Math' then name end) Math
+from tblTest group by id order by 1 desc
+
+select u.id, case 
+when p.id=1 then (
+  stuff((SELECT distinct ', ' + cast(id as varchar(10))
+           FROM tblUsers t where t.id in(1,2,4)
+           FOR XML PATH('')),1,1,''))
+		   
+when p.id=2 then (
+  stuff((SELECT distinct ', ' + cast(id as varchar(10))
+           FROM tblUsers t where t.id in(2,3)
+           FOR XML PATH('')),1,1,'')) 
+
+when p.id=3 then (
+  stuff((SELECT distinct ', ' + cast(id as varchar(10))
+           FROM tblUsers t where t.id in(3,1)
+           FOR XML PATH('')),1,1,'')) 
+
+when p.id=4 then (
+  stuff((SELECT distinct ', ' + cast(id as varchar(10))
+           FROM tblUsers t where t.id in(2,4)
+           FOR XML PATH('')),1,1,'')) 
+		   
+		   end as Users
+ from tblUsers u join tblProducts p on p.id=u.id
+
+
